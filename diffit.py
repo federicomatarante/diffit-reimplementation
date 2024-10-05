@@ -14,6 +14,10 @@ class TMSA(nn.Module):
     """
     Time-aware Multi-Head Self-Attention (TMSA) module.
     This module combines spatial and temporal embeddings into a unified attention mechanism.
+    More information can be found here:
+    https://arxiv.org/pdf/2312.02139
+    DiffiT: Diffusion Vision Transformers for Image Generation
+    by. Ali Hatamizadeh, Jiaming Song, Guilin Liu, Jan Kautz, Arash Vahdat
     """
 
     def __init__(self, d_model, num_heads):
@@ -45,11 +49,11 @@ class TMSA(nn.Module):
         """
         Perform scaled dot-product attention over the query (Q), key (K), and value (V) tensors.
 
-        :param Q: Query tensor of shape (seq_num, num_heads, seq_length, d_k).
-        :param K: Key tensor of shape (seq_num, num_heads, seq_length, d_k).
-        :param V: Value tensor of shape (seq_num, num_heads, seq_length, d_k).
+        :param Q: Query tensor of shape (batch_size, num_heads, seq_length, d_k).
+        :param K: Key tensor of shape (batch_size, num_heads, seq_length, d_k).
+        :param V: Value tensor of shape (batch_size, num_heads, seq_length, d_k).
         :param mask: Optional mask tensor for preventing attention to certain positions.
-        :return: Output tensor of shape (seq_num, num_heads, seq_length, d_k).
+        :return: Output tensor of shape (batch_size, num_heads, seq_length, d_k).
         """
         attn_scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(self.d_k)
         attn_scores += self.attn_bias  # Add bias to the attention scores
@@ -63,33 +67,32 @@ class TMSA(nn.Module):
         """
         Split the input tensor into multiple attention heads.
 
-        :param x: Input tensor of shape (seq_num, seq_length, d_model).
-        :return: Tensor of shape (seq_num, num_heads, seq_length, d_k).
+        :param x: Input tensor of shape (batch_size, seq_length, d_model).
+        :return: Tensor of shape (batch_size, num_heads, seq_length, d_k).
         """
-        seq_num, seq_length, _ = x.size()
-        return x.view(seq_num, seq_length, self.num_heads, self.d_k).transpose(1, 2)
+        batch_size, seq_length, _ = x.size()
+        return x.view(batch_size, seq_length, self.num_heads, self.d_k).transpose(1, 2)
 
     def combine_heads(self, x):
         """
         Combine the multiple attention heads back into a single output.
 
-        :param x: Input tensor of shape (seq_num, num_heads, seq_length, d_k).
-        :return: Tensor of shape (seq_num, seq_length, d_model).
+        :param x: Input tensor of shape (batch_size, num_heads, seq_length, d_k).
+        :return: Tensor of shape (batch_size, seq_length, d_model).
         """
-        seq_num, _, seq_length, _ = x.size()
-        return x.transpose(1, 2).contiguous().view(seq_num, seq_length, self.d_model)
+        batch_size, _, seq_length, _ = x.size()
+        return x.transpose(1, 2).contiguous().view(batch_size, seq_length, self.d_model)
 
     def forward(self, Xs, Xt, mask=None):
         """
         Forward pass of the TMSA module.
 
-        :param Xs: A Tensor of shape (seq_num, seq_len, d_model) representing spatial embeddings.
-        :param Xt: A Tensor of shape (seq_num, seq_len,d_model) representing temporal embeddings.
+        :param Xs: A Tensor of shape (batch_size, seq_len, d_model) representing spatial embeddings.
+        :param Xt: A Tensor of shape (batch_size, seq_len,d_model) representing temporal embeddings.
         :param mask: Optional mask for attention.
-        :return: A Tensor of shape (seq_num, seq_len, d_model) as the output of the attention mechanism.
+        :return: A Tensor of shape (batch_size, seq_len, d_model) as the output of the attention mechanism.
         """
 
-        # Project spatial and temporal embeddings to get query (Q), key (K), and value (V) tensors
         Q = self.W_qs(Xs) + self.W_qt(Xt)
         K = self.W_ks(Xs) + self.W_kt(Xt)
         V = self.W_vs(Xs) + self.W_vt(Xt)
@@ -112,6 +115,10 @@ class DiffTBlock(nn.Module):
     DiffTBlock is a building block that integrates Time-aware Multi-Head Self-Attention (TMSA)
     and a feed-forward neural network (MLP) with layer normalization. It processes spatial and
     temporal embeddings, suitable for tasks like video analysis or temporal sequence modeling.
+    More information can be found here:
+    https://arxiv.org/pdf/2312.02139
+    DiffiT: Diffusion Vision Transformers for Image Generation
+    by. Ali Hatamizadeh, Jiaming Song, Guilin Liu, Jan Kautz, Arash Vahdat
     """
 
     def __init__(self, hidden_size, num_heads, mlp_ratio=4.0, **block_kwargs):
@@ -119,8 +126,10 @@ class DiffTBlock(nn.Module):
         :param hidden_size: Dimensionality of the input embeddings. It must be divisible by num_heads.
         :param num_heads: Number of attention heads for the TMSA module.
         :param mlp_ratio: Ratio of the hidden size of the MLP to the input hidden size. Default is 4.0.
+            It will multiply the hidden_size by mlp_ratio.
         """
         super().__init__(**block_kwargs)
+        assert hidden_size % num_heads == 0, 'hidden_size must be divisible by num_heads'
         self.norm1 = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
         self.tmsa = TMSA(hidden_size, num_heads)
         self.norm2 = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
@@ -132,11 +141,10 @@ class DiffTBlock(nn.Module):
 
     def forward(self, x, c):
         """
-        :param x: Input tensor of shape (seq_num, seq_len, hidden_size).
-        :param c: Context tensor for attention of size (seq_num, hidden_size), one for each input.
+        :param x: Input tensor of shape (batch_size, seq_len, hidden_size).
+        :param c: Context tensor for attention of size (batch_size, hidden_size), one for each input.
             It's usually a combination of label and temporal embedding.
-
-        :return: Output tensor of shape (seq_num, seq_len, hidden_size).
+        :return: Output tensor of shape (batch_size, seq_len, hidden_size).
         """
         seq_len = x.shape[1]
         c = c.unsqueeze(1).repeat(1, seq_len, 1)
@@ -145,15 +153,38 @@ class DiffTBlock(nn.Module):
         return x
 
 
+class FinalLayer(nn.Module):
+    """
+    The final layer of DiffiT. It's necessary to transform the tensor to the necessary shape to unpatchify it correctly.
+    """
+
+    def __init__(self, hidden_size, patch_size, out_channels):
+        """
+        :param hidden_size: dimensionality of the input embeddings.
+        :param patch_size: patch size used to patch the input image.
+        :param out_channels: number of output channels the image should have.
+        """
+        super().__init__()
+        self.linear = nn.Linear(hidden_size, patch_size * patch_size * out_channels, bias=True)
+
+    def forward(self, x):
+        """
+        :param x: Input tensor of shape (batch_size, seq_len, hidden_size).
+        :return: Output tensor of shape (batch_size,seq_len, patch_size * patch_size * out_channels).
+        """
+        x = self.linear(x)
+        return x
+
+
 ################## Tests ##########################
-TESTING = True
+TESTING = False
 if TESTING and __name__ == '__main__':
     print("Testing TMSA")
     timestep_encoder = TimestepEmbedder(64)
     times = torch.randint(1, 10, (5,))
     embedded_times = timestep_encoder(times)
 
-    sequence = torch.rand(5, 30, 64)  # (seq_num, seq_len, d_model)
+    sequence = torch.rand(5, 30, 64)  # (batch_size, d_model, img_size)
     print("Embedded times shape: ", embedded_times.unsqueeze(1).repeat(1, 30, 1).shape)
     print("Sequence shape: ", sequence.size())
     tmsa = TMSA(64, num_heads=4)

@@ -108,8 +108,9 @@ class LabelEmbedder(nn.Module):
 
 
 ####################### Tests ####################################
-TESTING = False
-if TESTING and __name__ == '__main__':
+def main(testing=False):
+    if not testing:
+        return
     print("Testing TimeStepEmbedder")
     time_embedder = TimestepEmbedder(
         hidden_size=512
@@ -124,3 +125,7 @@ if TESTING and __name__ == '__main__':
     label_embedder = LabelEmbedder(num_classes=64, hidden_size=512, dropout_prob=0)
     labels_embeddings = label_embedder.forward(random_labels, train=False, )
     print("Embedded labels: ", labels_embeddings.size())
+
+
+if __name__ == '__main__':
+    main()

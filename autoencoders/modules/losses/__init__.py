@@ -1,0 +1,1 @@
+from autoencoders.modules.losses.contperceptual import LPIPSWithDiscriminator
