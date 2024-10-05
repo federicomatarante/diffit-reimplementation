@@ -188,7 +188,7 @@ class DiffiTSequential(nn.Module):
         return x
 
 
-class ImageDiffiT(nn.Module):
+class ImageDiffiT(nn.Module):  # TODO Maybe implement "learn sigma"
     """
     Diffusion model based on U-Net architecture with a DiffitResBlock backbone.
     More information can be found here:
@@ -217,6 +217,7 @@ class ImageDiffiT(nn.Module):
         super(ImageDiffiT, self).__init__()
         assert hidden_size % num_heads == 0, 'hidden_size must be divisible by num_heads'
         assert hidden_channels % num_groups == 0, 'hidden_channels must be divisible by num_groups'
+        self.num_classes = num_classes
         self.tokenizer = Tokenizer(in_channels=channels, out_channels=hidden_channels)
         self.t_embedder = TimestepEmbedder(hidden_size=hidden_size)
         self.y_embedder = LabelEmbedder(num_classes, hidden_size, class_dropout_prob)
@@ -311,6 +312,46 @@ class ImageDiffiT(nn.Module):
 
         return x
 
+    def forward_with_cfg(self, x, t, y, cfg_scale):
+        """
+        Forward pass of the model with a 3-channels classifiers free guidance.
+        Basically it works in the following way:
+        - The input x is repeated twice creating a new batch.
+        - The input t is repeated twice creating a new batch.
+        - The input y is concatenated to a batch of the same size in which each element is a "null" label ( which in
+        this case is "null_classes" ).
+        The model will predict the noise of each image 2 times: one guided ( when there is the label ) and
+        one not guided ( when the label is "null" ).
+        The process is applied only to the first 3 channels.
+
+        :param cfg_scale: the classifier-free-guidance scale. It's a parameter. The highest the number is, the more the
+         conditioning has importance.
+        :param x: (batch_size, channels, input_size, input_size) tensor of spatial inputs (squared image)
+        :param t: (batch_size,) tensor of diffusion timesteps, one per each image.
+        :param y: (batch_size,) tensor of class labels, one per each image.
+        :return: (batch_size*2, channels, input_size, input_size) tensor of spatial inputs (squared image)
+        """
+        # https://github.com/openai/glide-text2im/blob/main/notebooks/text2im.ipynb
+        combined = torch.cat([x, x], dim=0)
+        combined_times = torch.cat([t, t], dim=0)
+        null_labels = torch.full((x.shape[0],),
+                                 self.num_classes)  # "self.num_classes" is the special class for "no class"
+        combined_labels = torch.cat([y, null_labels], dim=0)
+        model_out = self.forward(combined, combined_times, combined_labels)
+        # Eps: first 3 channels
+        # Rest: remaining channels ( usually none )
+        eps, rest = model_out[:, :3], model_out[:, 3:]
+        # This is only about the first 3 channels
+        # cond_eps: noise generated conditionally
+        # uncond_eps: noise generated unconditionally.
+        cond_eps, uncond_eps = torch.split(eps, len(eps) // 2, dim=0)
+        # The noise is combined between the 2 using the weight "cfg scale"
+        half_eps = uncond_eps + cfg_scale * (cond_eps - uncond_eps)
+        # The batch is "doubled" going back to the original shape TODO why is it useful? Can't we just use half?
+        eps = torch.cat([half_eps, half_eps], dim=0)
+        # The three channels are combined with the rest - untouched
+        return torch.cat([eps, rest], dim=1)
+
 
 ################## Tests ##########################
 def main(testing=False):
@@ -338,4 +379,4 @@ def main(testing=False):
 
 
 if __name__ == '__main__':
-    main(True)
+    main()

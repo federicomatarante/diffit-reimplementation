@@ -1,5 +1,3 @@
-import os.path
-
 import torch
 from timm.layers import PatchEmbed
 from torch import nn
@@ -10,7 +8,7 @@ from utils.embedders import TimestepEmbedder, LabelEmbedder
 from utils.positional_embeddings import get_2d_sincos_pos_embed
 
 
-class LatentDiffiT(nn.Module):
+class LatentDiffiT(nn.Module):  # TODO maybe we can implement "learn sigma"
     """
     Diffusion model with a Transformer backbone which uses the latent space of the model.
     The image is encoded and decoded by a pretrained variational autoencoders, and processed by batch_size layers of the
@@ -26,7 +24,7 @@ class LatentDiffiT(nn.Module):
             autoencoder,
             encode_size=32,
             patch_size=2,
-            channels=3,  # TODO implement classifier-free guidance
+            channels=3,
             hidden_size=1152,
             depth=30,
             num_heads=16,
@@ -53,6 +51,7 @@ class LatentDiffiT(nn.Module):
         super().__init__()
         assert hidden_size % num_heads == 0, 'hidden_size must be divisible by num_heads'
 
+        self.num_classes = num_classes
         self.channels = channels
         self.patch_size = patch_size
         self.num_heads = num_heads
@@ -117,7 +116,7 @@ class LatentDiffiT(nn.Module):
         :param x: (batch_size, channels, input_size, input_size) tensor of spatial inputs (squared image)
         :param t: (batch_size,) tensor of diffusion timesteps, one per each image.
         :param y: (batch_size,) tensor of class labels, one per each image.
-        :return (batch_size, channels, input_size, input_size) tensor of spatial inputs (squared image)
+        :return: (batch_size, channels, input_size, input_size) tensor of spatial inputs (squared image)
         """
         with torch.no_grad():
             # Encoding the image
@@ -144,22 +143,44 @@ class LatentDiffiT(nn.Module):
             x = self.autoencoder.decode(x)  # (batch_size, channels, input_size)
         return x
 
-    def forward_with_cfg(self, x, t, y, cfg_scale):  # TODO to understands and adapt to Diffit
+    def forward_with_cfg(self, x, t, y, cfg_scale):
         """
-        Forward pass of DiT, but also batches the unconditional forward pass for classifier-free guidance.
+        Forward pass of the model with a 3-channels classifiers free guidance.
+        Basically it works in the following way:
+        - The input x is repeated twice creating a new batch.
+        - The input t is repeated twice creating a new batch.
+        - The input y is concatenated to a batch of the same size in which each element is a "null" label ( which in
+        this case is "null_classes" ).
+        The model will predict the noise of each image 2 times: one guided ( when there is the label ) and
+        one not guided ( when the label is "null" ).
+        The process is applied only to the first 3 channels.
+
+        :param cfg_scale: the classifier-free-guidance scale. It's a parameter. The highest the number is, the more the
+         conditioning has importance.
+        :param x: (batch_size, channels, input_size, input_size) tensor of spatial inputs (squared image)
+        :param t: (batch_size,) tensor of diffusion timesteps, one per each image.
+        :param y: (batch_size,) tensor of class labels, one per each image.
+        :return: (batch_size*2, channels, input_size, input_size) tensor of spatial inputs (squared image)
         """
         # https://github.com/openai/glide-text2im/blob/main/notebooks/text2im.ipynb
-        half = x[: len(x) // 2]
-        combined = torch.cat([half, half], dim=0)
-        model_out = self.forward(combined, t, y)
-        # For exact reproducibility reasons, we apply classifier-free guidance on only
-        # three channels by default. The standard approach to cfg applies it to all channels.
-        # This can be done by uncommenting the following line and commenting-out the line following that.
-        # eps, rest = model_out[:, :self.in_channels], model_out[:, self.in_channels:]
+        combined = torch.cat([x, x], dim=0)
+        combined_times = torch.cat([t, t], dim=0)
+        null_labels = torch.full((x.shape[0],),
+                                 self.num_classes)  # "self.num_classes" is the special class for "no class"
+        combined_labels = torch.cat([y, null_labels], dim=0)
+        model_out = self.forward(combined, combined_times, combined_labels)
+        # Eps: first 3 channels
+        # Rest: remaining channels ( usually none )
         eps, rest = model_out[:, :3], model_out[:, 3:]
+        # This is only about the first 3 channels
+        # cond_eps: noise generated conditionally
+        # uncond_eps: noise generated unconditionally.
         cond_eps, uncond_eps = torch.split(eps, len(eps) // 2, dim=0)
+        # The noise is combined between the 2 using the weight "cfg scale"
         half_eps = uncond_eps + cfg_scale * (cond_eps - uncond_eps)
+        # The batch is "doubled" going back to the original shape TODO why is it useful? Can't we just use half?
         eps = torch.cat([half_eps, half_eps], dim=0)
+        # The three channels are combined with the rest - untouched
         return torch.cat([eps, rest], dim=1)
 
 
