@@ -172,9 +172,9 @@ class DiffiTSequential(nn.Module):
         Returns an instance of DiffiTSequential having n blocks with same input parameters.
         :param n: Nr of blocks.
         :param kwargs: parameters of class "DiffiTResBlock".
-        :return:
+        :return: an instance of DiffiTSequential having n blocks with same input parameters.
         """
-        return DiffiTResBlock(*[DiffiTResBlock(**kwargs) for _ in range(n)])
+        return DiffiTSequential(*[DiffiTResBlock(**kwargs) for _ in range(n)])
 
     def forward(self, x, c):
         """
@@ -235,9 +235,9 @@ class ImageDiffiT(nn.Module):  # TODO Maybe implement "learn sigma"
         self.downsample_1 = nn.Conv2d(hidden_channels, hidden_channels, kernel_size=3, stride=2, padding=1)
         self.resBlock2 = DiffiTSequential.all_equals(l2, **get_block_params(num_groups, img_size // 2))
         self.downsample_2 = nn.Conv2d(hidden_channels, hidden_channels, kernel_size=3, stride=2, padding=1)
-        self.resBlock2 = DiffiTSequential.all_equals(l3, **get_block_params(num_groups, img_size // 4))
+        self.resBlock3 = DiffiTSequential.all_equals(l3, **get_block_params(num_groups, img_size // 4))
         self.downsample_3 = nn.Conv2d(hidden_channels, hidden_channels, kernel_size=3, stride=2, padding=1)
-        self.resBlock2 = DiffiTSequential.all_equals(l4, **get_block_params(num_groups, img_size // 8))
+        self.resBlock4 = DiffiTSequential.all_equals(l4, **get_block_params(num_groups, img_size // 8))
         self.upsample_1 = nn.ConvTranspose2d(hidden_channels, hidden_channels, kernel_size=4, stride=2, padding=1)
         self.resBlock3up = DiffiTSequential.all_equals(l3, **get_block_params(num_groups, img_size // 4))
         self.upsample_2 = nn.ConvTranspose2d(hidden_channels, hidden_channels, kernel_size=4, stride=2, padding=1)
@@ -354,7 +354,7 @@ class ImageDiffiT(nn.Module):  # TODO Maybe implement "learn sigma"
 
 
 ################## Tests ##########################
-def main(testing=False):
+def main(testing=True):
     if not testing:
         return
     print("Testing Tokenizer")

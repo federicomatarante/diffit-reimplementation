@@ -185,7 +185,7 @@ class LatentDiffiT(nn.Module):  # TODO maybe we can implement "learn sigma"
 
 
 ################## Tests ##########################
-def main(testing=False):
+def main(testing=True):
     if not testing:
         return
     with torch.no_grad():
