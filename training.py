@@ -92,7 +92,7 @@ class DiffiTTrainer:
             model_path = os.path.join(save_path, f'model_{epoch}.pth')
             torch.save(self.model.state_dict(), model_path)
 
-        history_df = pd.DataFrame(self.history)
-        history_path = os.path.join(save_path, 'history.csv')
-        history_df.to_csv(history_path, index=False)
+            history_df = pd.DataFrame(self.history)
+            history_path = os.path.join(save_path, f'history-{epoch}.csv')
+            history_df.to_csv(history_path, index=False)
         return self.history
