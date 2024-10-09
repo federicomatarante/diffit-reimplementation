@@ -1,0 +1,31 @@
+# Dataset settings
+img_size: 256  # Size of the input images (e.g., 256)
+save_folder: './models'  # Path to save model checkpoints and results
+dataset_folder: './imagenet256_sub_downsampled'  # Path to the dataset folder
+
+# Training settings
+epochs: 100  # Number of epochs for training
+batch_size: 32  # Batch size for training
+learning_rate: 0.001  # Learning rate for the optimizer
+test_size: 0.3  # Fraction of data used for testing (between 0 and 1)
+random_seed: 42  # Random seed for reproducibility
+loss_function: 'MSELoss'  # Loss function (e.g., 'MSELoss')
+
+# Model settings
+channels: 3  # Number of input/output channels
+patch_size: 2  # Patch size for the model (used in transformer-based models)
+hidden_size: 1152  # Size of the latent space in the model
+num_heads: 16  # Number of attention heads in transformer-based models
+class_dropout_prob: 0.1  # Dropout probability for classification layers
+num_classes: 1000  # Number of output classes for classification
+num_groups: 8 # Number of chanel groups to divide the input for group normalization
+hidden_channels: 128 # Number of channels used in the autoencoder stages
+l1: 4 # number of sequential Diffit Block in the first U-Net level
+l2: 4 # number of sequential Diffit Block in the second U-Net level
+l3: 4 # number of sequential Diffit Block in the third U-Net level
+l4: 4 # number of sequential Diffit Block in the forth U-Net level
+
+# Diffusion settings
+diffusion_steps: 1000  # Number of the diffusion steps in the diffusion process
+beta_start: 0.0001  # Beta start for noise generation
+beta_end: 0.02  # Beta end for noise generation

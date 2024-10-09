@@ -1,10 +1,11 @@
 import torch
 import yaml
+from torch import nn
 
 from autoencoders.util import instantiate_from_config
 
 
-class PretrainedAutoEncoder:
+class PretrainedAutoEncoder(nn.Module):
     """
     A class to automatically load the pretrained autoencoders from https://github.com/CompVis/latent-diffusion.
     It's necessary to download the correct weights from the GitHub.
@@ -16,9 +17,10 @@ class PretrainedAutoEncoder:
         :param weights_file: the path to the downloaded weights file.
         Careful! Each model has its own right config file to choose.
         :param model_config: the config of the pretrained autoencoders to use. Possible values are:
-            'kl_32x32x4', 'kl_16x16x16', 'kl_32x32x4', 'kl_64x64x3'
+            'kl_64x64x3', 'kl_32x32x4', 'kl_16x16x16', 'kl_8x8x64'
             The configuration ( with associated model ) decides the shape of the encoded input.
         """
+        super().__init__()
         config_files = {
             'kl_8x8x64': 'autoencoder_kl_8x8x64.yaml',
             'kl_16x16x16': 'autoencoder_kl_16x16x16.yaml',
@@ -55,3 +57,9 @@ class PretrainedAutoEncoder:
         :return: (batch_size, new_channels, new_input_size, new_input_size) of decoded spatial inputs (squared image)
         """
         return self.model.decode(x)
+
+    def forward(self, *args, **kwargs):
+        return self.encode(*args, **kwargs)
+
+    def to(self, *args, **kwargs):
+        self.model.to(*args, **kwargs)

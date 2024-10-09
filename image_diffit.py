@@ -201,9 +201,9 @@ class ImageDiffiT(nn.Module):  # TODO Maybe implement "learn sigma"
                  hidden_size=1152, channels=3, hidden_channels=128, num_heads=16, num_groups=8):
         """
         :param l1: number of sequential Diffit Block in the first U-Net level
-        :param l2: number of sequential Diffit Block in the first U-Net level
-        :param l3: number of sequential Diffit Block in the first U-Net level
-        :param l4: number of sequential Diffit Block in the first U-Net level
+        :param l2: number of sequential Diffit Block in the second U-Net level
+        :param l3: number of sequential Diffit Block in the third U-Net level
+        :param l4: number of sequential Diffit Block in the forth U-Net level
         :param patch_size: size of the patches to divide the input image.
         :param channels: number of channels in the input image.
         :param hidden_channels: number of hidden channels in the intermediate layers.
