@@ -1,7 +1,7 @@
 # DiffiT Reimplementation
 
 The presented project is a detailed re-implementation of the paper "DiffiT: Diffusion Vision Transformers for Image Generation".
-The papers presents a new method to handle the diffusion process of generative neural networks. In particular, it introduecs a new attention mechanism which preserves temporal information and shows two architectures in which this can be used.
+The paper presents a new method to handle the diffusion process of generative neural networks. In particular, it introduecs a new attention mechanism which preserves temporal information and shows two architectures in which this can be used.
 
 ## TAMSA and DiffiT block
 
