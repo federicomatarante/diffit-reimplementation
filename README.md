@@ -79,3 +79,17 @@ The qualitative results demonstrate the model’s ability to generate images of 
 <p align="center">
   <img src="./res/qualitativeResults.png" alt="Generated images" width="70%">
 </p>
+
+## Try the model!
+The following steps to try the model are:
+1. Downlaod the file 'DiffiT_reimplementation.ipynb' and load it on google colab.
+2. Run the following cells in order to download the required dependencies and to load the required classes:
+   a. SUPPORT CODE
+   b. DIFFUSION MODELS
+   c. CREATION OF EMBEDDINGS
+   d. TMSA
+   e. DIFFIT BLOCK
+   f. IMAGE SPACE MODEL
+   g. DATASET PREPARATION
+   h. MODEL LOADING
+3. 
