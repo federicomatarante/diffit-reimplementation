@@ -82,14 +82,15 @@ The qualitative results demonstrate the model’s ability to generate images of 
 
 ## Try the model!
 The following steps to try the model are:
+1. Make sure you have already access to the shared drive folder "DittiT_Data".
 1. Downlaod the file 'DiffiT_reimplementation.ipynb' and load it on google colab.
 2. Run the following cells in order to download the required dependencies and to load the required classes:
-   a. SUPPORT CODE
-   b. DIFFUSION MODELS
-   c. CREATION OF EMBEDDINGS
-   d. TMSA
-   e. DIFFIT BLOCK
-   f. IMAGE SPACE MODEL
-   g. DATASET PREPARATION
-   h. MODEL LOADING
-3. 
+   1. SUPPORT CODE
+   2. DIFFUSION MODELS
+   3. CREATION OF EMBEDDINGS
+   4. TMSA
+   5. DIFFIT BLOCK
+   6. IMAGE SPACE MODEL
+   7. DATASET PREPARATION
+   8. MODEL LOADING
+4. Run the cell "DEMONSTRATION" to generate one sample for each class.
