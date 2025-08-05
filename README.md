@@ -1,4 +1,9 @@
-# DiffiT Reimplementation
+**Disclaimer**: applicazione fatta per l'esame di _Neural Networks_, nel primo anno della facoltà magistrale di _AI & Robotics_ di _Sapienza Università di Roma_. 🇮🇹
+Attenzione: il README è disponibile solo in inglese! Usare il traduttore in caso di necessità.
+
+**Disclaimer**: This application was developed for the Neural Networks exam during the first year of the Master's program in AI & Robotics at Sapienza University of Rome. 🇮🇹
+
+# DiffiT Reimplementation 🇬🇧
 
 The presented project is a detailed re-implementation of the paper "DiffiT: Diffusion Vision Transformers for Image Generation".
 The paper presents a new method to handle the diffusion process of generative neural networks. In particular, it introduecs a new attention mechanism which preserves temporal information and shows two architectures in which this can be used.
